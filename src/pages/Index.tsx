@@ -42,6 +42,10 @@ const Index = () => {
     setMobileMenuOpen(false);
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    sendMessage(suggestion);
+  };
+
   return (
     <div className="h-screen flex bg-background overflow-hidden">
       {/* Mobile Menu Button */}
@@ -110,7 +114,11 @@ const Index = () => {
         </header>
 
         {/* Chat Window */}
-        <ChatWindow messages={messages} isLoading={isLoading} />
+        <ChatWindow 
+          messages={messages} 
+          isLoading={isLoading} 
+          onSuggestionClick={handleSuggestionClick}
+        />
 
         {/* Input Area */}
         <div className="p-4 lg:p-6 border-t border-border bg-background/50 backdrop-blur-sm">
