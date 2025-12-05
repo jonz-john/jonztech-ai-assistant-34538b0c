@@ -3,23 +3,7 @@ import { Message, ChatSession, DeveloperSettings } from "@/types/chat";
 import { toast } from "sonner";
 
 const DEVELOPER_PASSWORD = "avpx001@jonzjohn";
-
-const SYSTEM_PROMPT = `You are JonzTech AI, a friendly and helpful AI assistant created by JonzTech AI Labs LLC. Your CEO and developer is John Ominde.
-
-Your personality:
-- Friendly and approachable
-- Helpful for both beginners and experts
-- Give clear, concise, beginner-friendly explanations
-- If a question is too advanced, simplify it and give a basic understandable answer
-- You're knowledgeable about history, science, definitions, and general knowledge
-
-Important facts about yourself:
-- Your name is JonzTech AI
-- You were created by JonzTech AI Labs LLC
-- Your CEO and developer is John Ominde
-- When asked who made you or who developed you, always mention John Ominde as the CEO of JonzTech AI Labs LLC
-
-If someone says "Implement developer settings", ask for the developer password.`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export const useChat = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -67,6 +51,20 @@ export const useChat = () => {
           ? { ...s, messages: [...s.messages, message], updatedAt: new Date() }
           : s
       )
+    );
+  }, []);
+
+  const updateLastAssistantMessage = useCallback((sessionId: string, content: string) => {
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.id !== sessionId) return s;
+        const messages = [...s.messages];
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg?.role === "assistant") {
+          messages[messages.length - 1] = { ...lastMsg, content };
+        }
+        return { ...s, messages };
+      })
     );
   }, []);
 
@@ -118,47 +116,118 @@ export const useChat = () => {
 
       setIsLoading(true);
 
+      // Create assistant message placeholder
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        content: "",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+      addMessage(sessionId, assistantMessage);
+
       try {
-        // Simulate AI response for now (will be replaced with actual API call)
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        // Get all messages for context
+        const allMessages = [
+          ...sessions.find((s) => s.id === sessionId)?.messages || [],
+          userMessage
+        ].map((m) => ({
+          role: m.role,
+          content: m.content,
+          image: m.image,
+        }));
 
-        let response = "";
+        const response = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: allMessages,
+            customKnowledge: developerSettings.customKnowledge,
+            developerMode: developerSettings.enabled,
+          }),
+        });
 
-        // Check for developer settings trigger
-        if (content.toLowerCase().includes("implement developer settings")) {
-          response = "To access developer settings, please provide the developer password. This area is restricted to authorized personnel only.";
-        } else if (content.toLowerCase().includes("who made you") || content.toLowerCase().includes("who created you") || content.toLowerCase().includes("who developed you")) {
-          response = "I was created by JonzTech AI Labs LLC. My CEO and developer is John Ominde. He built me to be a helpful, friendly AI assistant that can answer questions and help people learn!";
-        } else {
-          // Default response
-          response = `Thank you for your question! As JonzTech AI, I'm here to help you understand "${content.slice(0, 50)}${content.length > 50 ? '...' : ''}". 
-
-Currently, I'm running in demo mode. To enable full AI capabilities with real-time responses, please connect to Lovable Cloud in the project settings.
-
-In the meantime, I can tell you that I was created by JonzTech AI Labs LLC, and my CEO is John Ominde. I'm designed to provide friendly, beginner-friendly explanations on any topic!`;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to get response");
         }
 
-        // Add custom knowledge context if developer mode is enabled
-        if (developerSettings.enabled && developerSettings.customKnowledge.length > 0) {
-          response += "\n\n[Developer Note: Custom knowledge base is active with " + developerSettings.customKnowledge.length + " entries]";
+        if (!response.body) {
+          throw new Error("No response body");
         }
 
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          content: response,
-          role: "assistant",
-          timestamp: new Date(),
-        };
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = "";
+        let textBuffer = "";
 
-        addMessage(sessionId, assistantMessage);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          textBuffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") break;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullContent += content;
+                updateLastAssistantMessage(sessionId, fullContent);
+              }
+            } catch {
+              // Incomplete JSON, continue
+            }
+          }
+        }
+
+        // Final flush
+        if (textBuffer.trim()) {
+          for (let raw of textBuffer.split("\n")) {
+            if (!raw) continue;
+            if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+            if (!raw.startsWith("data: ")) continue;
+            const jsonStr = raw.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullContent += content;
+                updateLastAssistantMessage(sessionId, fullContent);
+              }
+            } catch {
+              // Ignore
+            }
+          }
+        }
+
+        if (!fullContent) {
+          updateLastAssistantMessage(sessionId, "I apologize, but I couldn't generate a response. Please try again.");
+        }
       } catch (error) {
-        toast.error("Failed to get response. Please try again.");
         console.error("Chat error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to get response";
+        updateLastAssistantMessage(sessionId, `I'm sorry, I encountered an error: ${errorMessage}. Please try again.`);
+        toast.error(errorMessage);
       } finally {
         setIsLoading(false);
       }
     },
-    [currentSessionId, sessions, createSession, addMessage, updateSessionTitle, developerSettings]
+    [currentSessionId, sessions, createSession, addMessage, updateSessionTitle, updateLastAssistantMessage, developerSettings]
   );
 
   const clearChat = useCallback(() => {
