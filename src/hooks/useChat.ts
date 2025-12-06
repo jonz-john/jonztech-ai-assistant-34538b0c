@@ -1,23 +1,59 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Message, ChatSession, DeveloperSettings } from "@/types/chat";
 import { toast } from "sonner";
+import { useChatPersistence } from "./useChatPersistence";
 
 const DEVELOPER_PASSWORD = "avpx001@jonzjohn";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-export const useChat = () => {
+export const useChat = (userId?: string) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [developerSettings, setDeveloperSettings] = useState<DeveloperSettings>({
     enabled: false,
     customKnowledge: [],
   });
 
+  const persistence = useChatPersistence(userId);
+
+  // Load sessions from database when user logs in
+  useEffect(() => {
+    if (userId) {
+      setIsLoadingSessions(true);
+      persistence.loadSessions().then((loadedSessions) => {
+        setSessions(loadedSessions);
+        setIsLoadingSessions(false);
+      });
+    } else {
+      // Clear sessions when user logs out
+      setSessions([]);
+      setCurrentSessionId(null);
+    }
+  }, [userId]);
+
   const currentSession = sessions.find((s) => s.id === currentSessionId);
   const messages = currentSession?.messages || [];
 
-  const createSession = useCallback(() => {
+  const createSession = useCallback(async () => {
+    if (userId) {
+      // Create in database
+      const newId = await persistence.createSession("New Chat");
+      if (newId) {
+        const newSession: ChatSession = {
+          id: newId,
+          title: "New Chat",
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        setSessions((prev) => [newSession, ...prev]);
+        setCurrentSessionId(newId);
+        return newId;
+      }
+    }
+    // Fallback for non-authenticated users (temporary session)
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
       title: "New Chat",
@@ -28,21 +64,27 @@ export const useChat = () => {
     setSessions((prev) => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
     return newSession.id;
-  }, []);
+  }, [userId, persistence]);
 
-  const deleteSession = useCallback((id: string) => {
+  const deleteSession = useCallback(async (id: string) => {
+    if (userId) {
+      await persistence.deleteSession(id);
+    }
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (currentSessionId === id) {
       setCurrentSessionId(null);
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, userId, persistence]);
 
-  const updateSessionTitle = useCallback((id: string, firstMessage: string) => {
+  const updateSessionTitle = useCallback(async (id: string, firstMessage: string) => {
     const title = firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "");
+    if (userId) {
+      await persistence.updateSessionTitle(id, title);
+    }
     setSessions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, title } : s))
     );
-  }, []);
+  }, [userId, persistence]);
 
   const addMessage = useCallback((sessionId: string, message: Message) => {
     setSessions((prev) =>
@@ -54,14 +96,14 @@ export const useChat = () => {
     );
   }, []);
 
-  const updateLastAssistantMessage = useCallback((sessionId: string, content: string) => {
+  const updateLastAssistantMessage = useCallback((sessionId: string, content: string, messageId?: string) => {
     setSessions((prev) =>
       prev.map((s) => {
         if (s.id !== sessionId) return s;
         const messages = [...s.messages];
         const lastMsg = messages[messages.length - 1];
         if (lastMsg?.role === "assistant") {
-          messages[messages.length - 1] = { ...lastMsg, content };
+          messages[messages.length - 1] = { ...lastMsg, content, id: messageId || lastMsg.id };
         }
         return { ...s, messages };
       })
@@ -81,6 +123,7 @@ export const useChat = () => {
       ...prev,
       customKnowledge: [...prev.customKnowledge, knowledge],
     }));
+    toast.success("Knowledge added to AI memory!");
   }, []);
 
   const removeCustomKnowledge = useCallback((index: number) => {
@@ -91,16 +134,22 @@ export const useChat = () => {
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string, image?: string) => {
+    async (content: string, image?: string, documentText?: string) => {
       let sessionId = currentSessionId;
 
       if (!sessionId) {
-        sessionId = createSession();
+        sessionId = await createSession();
+      }
+
+      // If there's document text, prepend it to the content
+      let fullContent = content;
+      if (documentText) {
+        fullContent = `[Document Content]:\n${documentText}\n\n[User Question]: ${content || "Please analyze this document."}`;
       }
 
       const userMessage: Message = {
         id: crypto.randomUUID(),
-        content,
+        content: fullContent,
         role: "user",
         timestamp: new Date(),
         image,
@@ -108,10 +157,22 @@ export const useChat = () => {
 
       addMessage(sessionId, userMessage);
 
+      // Save user message to database
+      if (userId) {
+        const savedMsgId = await persistence.saveMessage(sessionId, {
+          role: "user",
+          content: fullContent,
+          image,
+        });
+        if (savedMsgId) {
+          userMessage.id = savedMsgId;
+        }
+      }
+
       // Update title if first message
       const session = sessions.find((s) => s.id === sessionId);
       if (!session || session.messages.length === 0) {
-        updateSessionTitle(sessionId, content);
+        updateSessionTitle(sessionId, content || "Document analysis");
       }
 
       setIsLoading(true);
@@ -183,9 +244,9 @@ export const useChat = () => {
 
             try {
               const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                fullContent += content;
+              const contentChunk = parsed.choices?.[0]?.delta?.content;
+              if (contentChunk) {
+                fullContent += contentChunk;
                 updateLastAssistantMessage(sessionId, fullContent);
               }
             } catch {
@@ -204,9 +265,9 @@ export const useChat = () => {
             if (jsonStr === "[DONE]") continue;
             try {
               const parsed = JSON.parse(jsonStr);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                fullContent += content;
+              const contentChunk = parsed.choices?.[0]?.delta?.content;
+              if (contentChunk) {
+                fullContent += contentChunk;
                 updateLastAssistantMessage(sessionId, fullContent);
               }
             } catch {
@@ -216,7 +277,19 @@ export const useChat = () => {
         }
 
         if (!fullContent) {
-          updateLastAssistantMessage(sessionId, "I apologize, but I couldn't generate a response. Please try again.");
+          fullContent = "I apologize, but I couldn't generate a response. Please try again.";
+          updateLastAssistantMessage(sessionId, fullContent);
+        }
+
+        // Save assistant message to database
+        if (userId) {
+          const savedAssistantId = await persistence.saveMessage(sessionId, {
+            role: "assistant",
+            content: fullContent,
+          });
+          if (savedAssistantId) {
+            updateLastAssistantMessage(sessionId, fullContent, savedAssistantId);
+          }
         }
       } catch (error) {
         console.error("Chat error:", error);
@@ -227,24 +300,28 @@ export const useChat = () => {
         setIsLoading(false);
       }
     },
-    [currentSessionId, sessions, createSession, addMessage, updateSessionTitle, updateLastAssistantMessage, developerSettings]
+    [currentSessionId, sessions, createSession, addMessage, updateSessionTitle, updateLastAssistantMessage, developerSettings, userId, persistence]
   );
 
-  const clearChat = useCallback(() => {
+  const clearChat = useCallback(async () => {
     if (currentSessionId) {
+      if (userId) {
+        await persistence.clearSessionMessages(currentSessionId);
+      }
       setSessions((prev) =>
         prev.map((s) =>
           s.id === currentSessionId ? { ...s, messages: [] } : s
         )
       );
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, userId, persistence]);
 
   return {
     sessions,
     currentSessionId,
     messages,
     isLoading,
+    isLoadingSessions,
     developerSettings,
     setCurrentSessionId,
     createSession,

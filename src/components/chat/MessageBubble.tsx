@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Message } from "@/types/chat";
-import { User, Bot } from "lucide-react";
+import { User } from "lucide-react";
+import logo from "@/assets/logo.jpg";
 
 interface MessageBubbleProps {
   message: Message;
@@ -18,11 +19,15 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
     >
       <div
         className={cn(
-          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-          isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden",
+          isUser ? "bg-primary text-primary-foreground" : "bg-transparent"
         )}
       >
-        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+        {isUser ? (
+          <User className="w-4 h-4" />
+        ) : (
+          <img src={logo} alt="JonzTech AI" className="w-8 h-8 object-cover rounded-full" />
+        )}
       </div>
 
       <div
