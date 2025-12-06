@@ -2,16 +2,25 @@ import { useState, useEffect } from "react";
 import { ChatSidebar } from "@/components/sidebar/ChatSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { InputBox } from "@/components/chat/InputBox";
-import { DeveloperSettingsModal } from "@/components/modals/DeveloperSettingsModal";
 import { useChat } from "@/hooks/useChat";
 import { Button } from "@/components/ui/button";
 import { Trash2, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const Index = () => {
   const [darkMode, setDarkMode] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const {
     sessions,
@@ -38,8 +47,33 @@ const Index = () => {
   }, [darkMode]);
 
   const handleSend = (message: string, image?: string) => {
+    // Check if user is trying to enable developer settings
+    const lowerMessage = message.toLowerCase().trim();
+    if (lowerMessage === "implement developer settings" || lowerMessage === "enable developer settings") {
+      if (developerSettings.enabled) {
+        sendMessage(message, image);
+      } else {
+        setPasswordDialogOpen(true);
+        setPassword("");
+        setPasswordError("");
+      }
+      return;
+    }
     sendMessage(message, image);
     setMobileMenuOpen(false);
+  };
+
+  const handlePasswordSubmit = () => {
+    const success = unlockDeveloperMode(password);
+    if (success) {
+      setPasswordDialogOpen(false);
+      setPassword("");
+      setPasswordError("");
+      // Send a confirmation message to the chat
+      sendMessage("Developer settings have been unlocked successfully.");
+    } else {
+      setPasswordError("Incorrect password. Access denied.");
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -72,7 +106,6 @@ const Index = () => {
             setMobileMenuOpen(false);
           }}
           onDeleteSession={deleteSession}
-          onOpenSettings={() => setSettingsOpen(true)}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
         />
@@ -131,16 +164,35 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Developer Settings Modal */}
-      <DeveloperSettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        isUnlocked={developerSettings.enabled}
-        onUnlock={unlockDeveloperMode}
-        customKnowledge={developerSettings.customKnowledge}
-        onAddKnowledge={addCustomKnowledge}
-        onRemoveKnowledge={removeCustomKnowledge}
-      />
+      {/* Developer Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Developer Authentication Required</DialogTitle>
+            <DialogDescription>
+              Enter the developer password to unlock developer settings.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Enter developer password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+            />
+            {passwordError && (
+              <p className="text-sm text-destructive">{passwordError}</p>
+            )}
+            <Button onClick={handlePasswordSubmit} className="w-full btn-primary">
+              Authenticate
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
