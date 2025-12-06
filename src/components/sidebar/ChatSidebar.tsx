@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatSession } from "@/types/chat";
-import { Plus, MessageSquare, Trash2, Settings, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatSidebarProps {
@@ -11,7 +11,6 @@ interface ChatSidebarProps {
   onNewChat: () => void;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
-  onOpenSettings: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -22,7 +21,6 @@ export const ChatSidebar = ({
   onNewChat,
   onSelectSession,
   onDeleteSession,
-  onOpenSettings,
   darkMode,
   onToggleDarkMode,
 }: ChatSidebarProps) => {
@@ -111,13 +109,6 @@ export const ChatSidebar = ({
         >
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           {!collapsed && <span className="text-sm">{darkMode ? "Light Mode" : "Dark Mode"}</span>}
-        </button>
-        <button
-          onClick={onOpenSettings}
-          className={cn("sidebar-item w-full", collapsed && "justify-center")}
-        >
-          <Settings className="w-4 h-4" />
-          {!collapsed && <span className="text-sm">Settings</span>}
         </button>
       </div>
     </aside>
