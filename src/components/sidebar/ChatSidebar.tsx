@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatSession } from "@/types/chat";
-import { Plus, MessageSquare, Trash2, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Moon, Sun, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.jpg";
 
 interface ChatSidebarProps {
   sessions: ChatSession[];
@@ -13,6 +14,8 @@ interface ChatSidebarProps {
   onDeleteSession: (id: string) => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  isAuthenticated?: boolean;
+  onAuthClick?: () => void;
 }
 
 export const ChatSidebar = ({
@@ -23,6 +26,8 @@ export const ChatSidebar = ({
   onDeleteSession,
   darkMode,
   onToggleDarkMode,
+  isAuthenticated = false,
+  onAuthClick,
 }: ChatSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -38,9 +43,7 @@ export const ChatSidebar = ({
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">JT</span>
-              </div>
+              <img src={logo} alt="JonzTech AI" className="w-8 h-8 rounded-lg object-cover" />
               <span className="font-semibold text-sm">JonzTech AI</span>
             </div>
           )}
@@ -71,34 +74,48 @@ export const ChatSidebar = ({
 
       {/* Chat Sessions */}
       <ScrollArea className="flex-1 px-3">
-        <div className="space-y-1">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={cn(
-                "group sidebar-item cursor-pointer",
-                currentSessionId === session.id && "sidebar-item-active"
-              )}
-              onClick={() => onSelectSession(session.id)}
-            >
-              <MessageSquare className="w-4 h-4 flex-shrink-0" />
-              {!collapsed && (
-                <>
-                  <span className="flex-1 truncate text-sm">{session.title}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteSession(session.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </button>
-                </>
-              )}
+        {isAuthenticated ? (
+          <div className="space-y-1">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className={cn(
+                  "group sidebar-item cursor-pointer",
+                  currentSessionId === session.id && "sidebar-item-active"
+                )}
+                onClick={() => onSelectSession(session.id)}
+              >
+                <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 truncate text-sm">{session.title}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(session.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          !collapsed && (
+            <div className="text-center py-8 px-2">
+              <p className="text-sm text-muted-foreground mb-3">
+                Sign in to save your chat history
+              </p>
+              <Button variant="outline" size="sm" onClick={onAuthClick} className="w-full">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
             </div>
-          ))}
-        </div>
+          )
+        )}
       </ScrollArea>
 
       {/* Footer */}
