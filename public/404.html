@@ -5,21 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JonzTech AI</title>
     <script>
-      // Single Page App redirect for GitHub Pages
-      // Redirects all 404s to index.html with the path preserved
-      const segment = 1; // Set to 0 for username.github.io, 1 for project pages
-      const pathSegmentsToKeep = segment;
-      const l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // Redirect to index.html with hash routing for SPA
+      var pathSegmentsToKeep = window.location.pathname.split('/').filter(Boolean).length > 1 ? 1 : 0;
+      var path = window.location.pathname.split('/').slice(pathSegmentsToKeep + 1).join('/');
+      var redirect = window.location.origin + window.location.pathname.split('/').slice(0, pathSegmentsToKeep + 1).join('/') + '/#/' + path;
+      window.location.replace(redirect);
     </script>
   </head>
   <body>
-    Redirecting...
+    <noscript>Please enable JavaScript to use JonzTech AI.</noscript>
   </body>
 </html>
