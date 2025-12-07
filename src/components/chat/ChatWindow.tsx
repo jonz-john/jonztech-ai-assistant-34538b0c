@@ -54,12 +54,12 @@ export const ChatWindow = ({ messages, isLoading, onSuggestionClick }: ChatWindo
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+    <div className="h-full overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 scrollbar-thin">
       {messages.map((message) => (
         <MessageBubble key={message.id} message={message} />
       ))}
       {isLoading && <TypingIndicator />}
-      <div ref={messagesEndRef} />
+      <div ref={messagesEndRef} className="h-1" />
     </div>
   );
 };

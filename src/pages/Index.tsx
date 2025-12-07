@@ -129,10 +129,10 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen flex bg-background overflow-hidden">
+    <div className="h-[100dvh] flex flex-col lg:flex-row bg-background overflow-hidden">
       {/* Mobile Menu Button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-card border border-border"
+        className="lg:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-card border border-border"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -170,27 +170,27 @@ const Index = () => {
       )}
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full">
         {/* Header */}
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 lg:px-6 glass-strong">
-          <div className="flex items-center gap-3 ml-12 lg:ml-0">
-            <img src={logo} alt="JonzTech AI" className="w-8 h-8 rounded-lg object-cover" />
+        <header className="flex-shrink-0 h-12 sm:h-14 border-b border-border flex items-center justify-between px-3 sm:px-4 lg:px-6 glass-strong">
+          <div className="flex items-center gap-2 sm:gap-3 ml-10 lg:ml-0">
+            <img src={logo} alt="JonzTech AI" className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover" />
             <div>
-              <h1 className="font-semibold text-sm">JonzTech AI</h1>
-              <p className="text-[10px] text-muted-foreground">by JonzTech AI Labs LLC</p>
+              <h1 className="font-semibold text-xs sm:text-sm">JonzTech AI</h1>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">by JonzTech AI Labs LLC</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {messages.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={clearChat}
-                className="text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive h-8 px-2 sm:px-3"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Clear Chat
+                <Trash2 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Clear Chat</span>
               </Button>
             )}
 
@@ -199,20 +199,20 @@ const Index = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-muted-foreground"
+                className="text-muted-foreground h-8 px-2 sm:px-3"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign Out</span>
               </Button>
             ) : (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/auth")}
-                className="text-muted-foreground"
+                className="text-muted-foreground h-8 px-2 sm:px-3"
               >
-                <User className="w-4 h-4 mr-2" />
-                Sign In
+                <User className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign In</span>
               </Button>
             )}
           </div>
@@ -220,32 +220,34 @@ const Index = () => {
 
         {/* Auth notice for non-authenticated users */}
         {!user && (
-          <div className="bg-secondary/50 border-b border-border px-4 py-2 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex-shrink-0 bg-secondary/50 border-b border-border px-3 sm:px-4 py-1.5 sm:py-2 text-center">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               <button onClick={() => navigate("/auth")} className="text-primary hover:underline font-medium">
                 Sign in
               </button>
-              {" "}to save your chat history across sessions
+              {" "}to save your chat history
             </p>
           </div>
         )}
 
-        {/* Chat Window */}
-        <ChatWindow 
-          messages={messages} 
-          isLoading={isLoading} 
-          onSuggestionClick={handleSuggestionClick}
-        />
+        {/* Chat Window - takes remaining space */}
+        <div className="flex-1 overflow-hidden min-h-0">
+          <ChatWindow 
+            messages={messages} 
+            isLoading={isLoading} 
+            onSuggestionClick={handleSuggestionClick}
+          />
+        </div>
 
-        {/* Input Area */}
-        <div className="p-4 lg:p-6 border-t border-border bg-background/50 backdrop-blur-sm">
+        {/* Input Area - fixed at bottom */}
+        <div className="flex-shrink-0 p-2 sm:p-3 lg:p-4 border-t border-border bg-background/95 backdrop-blur-sm safe-area-bottom">
           <div className="max-w-3xl mx-auto">
             <InputBox 
               onSend={handleSend} 
               disabled={isLoading} 
               onGeneratePDF={handleGeneratePDF}
             />
-            <p className="text-[10px] text-center text-muted-foreground mt-2">
+            <p className="text-[9px] sm:text-[10px] text-center text-muted-foreground mt-1.5 sm:mt-2">
               JonzTech AI can make mistakes. Consider checking important information.
             </p>
           </div>
