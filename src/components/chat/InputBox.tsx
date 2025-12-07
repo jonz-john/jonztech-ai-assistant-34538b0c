@@ -113,7 +113,7 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
   return (
     <div
       className={cn(
-        "glass-strong rounded-2xl p-3 transition-all duration-200",
+        "glass-strong rounded-2xl p-3 sm:p-4 transition-all duration-200 relative",
         isDragging && "ring-2 ring-primary ring-offset-2 ring-offset-background"
       )}
       onDrop={handleDrop}
@@ -125,7 +125,7 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
           <img
             src={image}
             alt="Preview"
-            className="max-h-32 rounded-lg object-cover"
+            className="max-h-24 sm:max-h-32 rounded-lg object-cover"
           />
           <button
             onClick={() => setImage(null)}
@@ -139,7 +139,7 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
       {documentName && (
         <div className="relative inline-flex items-center gap-2 mb-3 px-3 py-2 bg-secondary rounded-lg">
           <FileText className="w-4 h-4 text-primary" />
-          <span className="text-sm truncate max-w-[200px]">{documentName}</span>
+          <span className="text-sm truncate max-w-[150px] sm:max-w-[200px]">{documentName}</span>
           <button
             onClick={() => {
               setDocumentText(null);
@@ -152,8 +152,19 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <div className="flex gap-1">
+      {/* Textarea first for better mobile layout */}
+      <Textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Ask JonzTech AI anything..."
+        className="min-h-[60px] sm:min-h-[80px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-base sm:text-sm mb-3"
+        disabled={disabled}
+      />
+
+      {/* Bottom toolbar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-0.5 sm:gap-1 flex-wrap">
           <input
             type="file"
             ref={fileInputRef}
@@ -171,16 +182,16 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground"
             onClick={() => fileInputRef.current?.click()}
             title="Upload image"
           >
-            <Image className="w-5 h-5" />
+            <Image className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground"
             onClick={() => {
               if (fileInputRef.current) {
                 fileInputRef.current.setAttribute('capture', 'environment');
@@ -189,42 +200,33 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
             }}
             title="Take photo"
           >
-            <Camera className="w-5 h-5" />
+            <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground"
             onClick={() => docInputRef.current?.click()}
             title="Upload document"
           >
-            <FileText className="w-5 h-5" />
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground"
             onClick={handleGeneratePDF}
             title="Generate PDF from response"
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
-
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask JonzTech AI anything..."
-          className="min-h-[44px] max-h-32 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-          disabled={disabled}
-        />
 
         <Button
           onClick={handleSend}
           disabled={disabled || (!message.trim() && !image && !documentText)}
           size="icon"
-          className="h-9 w-9 rounded-xl btn-primary"
+          className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl btn-primary flex-shrink-0"
         >
           <Send className="w-4 h-4" />
         </Button>
