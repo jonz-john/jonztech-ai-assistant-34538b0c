@@ -3,10 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
-// For GitHub Pages: set base to your repo name (e.g., "/repo-name/") or "/" for username.github.io
+// For GitHub Pages: automatically uses repo name from env or defaults to root
 export default defineConfig(({ mode }) => ({
-  base: process.env.GITHUB_ACTIONS ? "/JonzTech-AI-Helper/" : "/",
+  base: "./",
   server: {
     host: "::",
     port: 8080,
