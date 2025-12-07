@@ -4,8 +4,9 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
+// For GitHub Pages: set base to your repo name (e.g., "/repo-name/") or "/" for username.github.io
 export default defineConfig(({ mode }) => ({
-  base: "/",
+  base: process.env.GITHUB_ACTIONS ? "/JonzTech-AI-Helper/" : "/",
   server: {
     host: "::",
     port: 8080,

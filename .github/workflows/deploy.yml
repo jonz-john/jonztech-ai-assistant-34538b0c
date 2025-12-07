@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_ACTIONS: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +37,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Copy 404.html for SPA support
+        run: cp dist/index.html dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
