@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_stats: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_stats_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -105,7 +137,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      usage_summary: {
+        Row: {
+          date: string | null
+          total_requests: number | null
+          total_tokens: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
