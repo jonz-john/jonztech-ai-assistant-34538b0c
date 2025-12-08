@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Message, ChatSession, DeveloperSettings } from "@/types/chat";
 import { toast } from "sonner";
 import { useChatPersistence } from "./useChatPersistence";
+import { setDeveloperModeFlag } from "@/utils/antiInspect";
 
 const DEVELOPER_PASSWORD = "avpx001@jonzjohn";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -113,6 +114,7 @@ export const useChat = (userId?: string) => {
   const unlockDeveloperMode = useCallback((password: string): boolean => {
     if (password === DEVELOPER_PASSWORD) {
       setDeveloperSettings((prev) => ({ ...prev, enabled: true }));
+      setDeveloperModeFlag(true); // Allow dev tools inspection
       return true;
     }
     return false;
