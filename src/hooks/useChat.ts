@@ -3,9 +3,33 @@ import { Message, ChatSession, DeveloperSettings } from "@/types/chat";
 import { toast } from "sonner";
 import { useChatPersistence } from "./useChatPersistence";
 import { setDeveloperModeFlag } from "@/utils/antiInspect";
+import { supabase } from "@/integrations/supabase/client";
 
-const DEVELOPER_PASSWORD = "avpx001@jonzjohn";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+// Check if user has developer/admin role from the database
+async function checkDeveloperRole(): Promise<boolean> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data: roles, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error checking roles:", error.message);
+      return false;
+    }
+
+    // Check if user has admin or developer role
+    return roles?.some(r => r.role === "admin" || r.role === "developer") || false;
+  } catch (error) {
+    console.error("Error checking developer role:", error);
+    return false;
+  }
+}
 
 export const useChat = (userId?: string) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -111,12 +135,16 @@ export const useChat = (userId?: string) => {
     );
   }, []);
 
-  const unlockDeveloperMode = useCallback((password: string): boolean => {
-    if (password === DEVELOPER_PASSWORD) {
+  // Server-validated developer mode unlock
+  const unlockDeveloperMode = useCallback(async (): Promise<boolean> => {
+    const hasAccess = await checkDeveloperRole();
+    if (hasAccess) {
       setDeveloperSettings((prev) => ({ ...prev, enabled: true }));
-      setDeveloperModeFlag(true); // Allow dev tools inspection
+      setDeveloperModeFlag(true);
+      toast.success("Developer mode enabled!");
       return true;
     }
+    toast.error("You don't have developer access. Contact an administrator.");
     return false;
   }, []);
 
