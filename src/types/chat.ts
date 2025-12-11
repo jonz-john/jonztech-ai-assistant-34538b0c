@@ -1,9 +1,15 @@
+export interface DownloadLink {
+  url: string;
+  filename: string;
+}
+
 export interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
   image?: string;
+  downloadLink?: DownloadLink;
 }
 
 export interface ChatSession {

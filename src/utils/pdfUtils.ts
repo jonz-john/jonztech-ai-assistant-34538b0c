@@ -62,6 +62,12 @@ export const downloadPDF = (content: string, filename: string = "jonztech-ai-doc
   doc.save(filename);
 };
 
+export const createPDFBlobUrl = (content: string, title?: string): string => {
+  const doc = generatePDF(content, title);
+  const blob = doc.output('blob');
+  return URL.createObjectURL(blob);
+};
+
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   try {
     const arrayBuffer = await file.arrayBuffer();

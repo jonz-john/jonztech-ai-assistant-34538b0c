@@ -43,6 +43,7 @@ const Index = () => {
     clearChat,
     unlockDeveloperMode,
     addCustomKnowledge,
+    generatePDFResponse,
   } = useChat(user?.id);
 
   useEffect(() => {
@@ -93,7 +94,7 @@ const Index = () => {
     sendMessage(suggestion);
   };
 
-  const handleGeneratePDF = (content: string) => {
+  const handleGeneratePDF = async (content: string) => {
     // Get the last assistant message or use provided content
     const lastAssistantMessage = messages.filter(m => m.role === "assistant").pop();
     const pdfContent = lastAssistantMessage?.content || content;
@@ -103,8 +104,14 @@ const Index = () => {
       return;
     }
 
-    downloadPDF(pdfContent, `jonztech-ai-${Date.now()}.pdf`);
-    toast.success("PDF downloaded successfully!");
+    // Create a session if needed
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      sessionId = await createSession();
+    }
+    
+    // Generate PDF and add message with download link
+    generatePDFResponse(sessionId, pdfContent, "JonzTech_AI_Response");
   };
 
   const handleSignOut = async () => {

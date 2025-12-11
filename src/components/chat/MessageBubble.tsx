@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Message } from "@/types/chat";
-import { User } from "lucide-react";
+import { User, FileText } from "lucide-react";
 import logo from "@/assets/logo.jpg";
 
 interface MessageBubbleProps {
@@ -46,6 +46,18 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           />
         )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        
+        {message.downloadLink && (
+          <a
+            href={message.downloadLink.url}
+            download={message.downloadLink.filename}
+            className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors text-sm"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Download {message.downloadLink.filename}</span>
+          </a>
+        )}
+        
         <span className={cn(
           "text-[10px] mt-1.5 block opacity-60",
           isUser ? "text-right" : "text-left"
