@@ -337,6 +337,42 @@ export const useChat = (userId?: string) => {
           updateLastAssistantMessage(sessionId, fullContent);
         }
 
+        // Check if response contains PDF content markers
+        const pdfMatch = fullContent.match(/\[PDF_CONTENT\]([\s\S]*?)\[\/PDF_CONTENT\]/);
+        if (pdfMatch) {
+          const pdfContent = pdfMatch[1].trim();
+          // Extract title from first line or use default
+          const firstLine = pdfContent.split('\n')[0].trim();
+          const title = firstLine.length > 0 && firstLine.length < 100 ? firstLine : "JonzTech_AI_Document";
+          
+          // Create PDF and get download link
+          const filename = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+          const url = createPDFBlobUrl(pdfContent, title);
+          const downloadLink: DownloadLink = { url, filename };
+          
+          // Update message to show clean content with download link
+          const cleanContent = fullContent.replace(/\[PDF_CONTENT\][\s\S]*?\[\/PDF_CONTENT\]/, '').trim() || 
+            `Your PDF "${title}" is ready for download:`;
+          
+          // Update the assistant message with download link
+          setSessions((prev) =>
+            prev.map((s) => {
+              if (s.id !== sessionId) return s;
+              const messages = [...s.messages];
+              const lastMsg = messages[messages.length - 1];
+              if (lastMsg?.role === "assistant") {
+                messages[messages.length - 1] = { 
+                  ...lastMsg, 
+                  content: cleanContent,
+                  downloadLink
+                };
+              }
+              return { ...s, messages };
+            })
+          );
+          fullContent = cleanContent;
+        }
+
         // Save assistant message to database
         if (userId) {
           const savedAssistantId = await persistence.saveMessage(sessionId, {
