@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { Message } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
-import { Bot } from "lucide-react";
+import logo from "@/assets/logo.jpg";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -28,16 +28,15 @@ export const ChatWindow = ({ messages, isLoading, onSuggestionClick }: ChatWindo
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-md animate-fade-in">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6 animate-pulse-glow">
-            <Bot className="w-10 h-10 text-primary" />
-          </div>
-          <h2 className="text-2xl font-semibold mb-3">
-            Welcome to <span className="gradient-text">JonzTech AI</span>
+          <img 
+            src={logo} 
+            alt="JonzTech AI" 
+            className="w-20 h-20 rounded-2xl mx-auto mb-6 object-cover"
+          />
+          <h2 className="text-2xl font-semibold mb-6">
+            Welcome to <span className="gradient-text">JonzTech AI</span>. How can I help you?
           </h2>
-          <p className="text-muted-foreground leading-relaxed">
-            I'm your friendly AI assistant created by JonzTech AI Labs LLC. Ask me anything about history, science, definitions, or any general knowledge questions. I'll give you clear, beginner-friendly explanations!
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-2 justify-center">
             {suggestions.map((suggestion) => (
               <button
                 key={suggestion}
