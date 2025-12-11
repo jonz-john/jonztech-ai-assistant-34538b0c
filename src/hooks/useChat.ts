@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
-import { Message, ChatSession, DeveloperSettings } from "@/types/chat";
+import { Message, ChatSession, DeveloperSettings, DownloadLink } from "@/types/chat";
 import { toast } from "sonner";
 import { useChatPersistence } from "./useChatPersistence";
 import { setDeveloperModeFlag } from "@/utils/antiInspect";
 import { supabase } from "@/integrations/supabase/client";
+import { createPDFBlobUrl } from "@/utils/pdfUtils";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -121,19 +122,44 @@ export const useChat = (userId?: string) => {
     );
   }, []);
 
-  const updateLastAssistantMessage = useCallback((sessionId: string, content: string, messageId?: string) => {
+  const updateLastAssistantMessage = useCallback((sessionId: string, content: string, messageId?: string, downloadLink?: DownloadLink) => {
     setSessions((prev) =>
       prev.map((s) => {
         if (s.id !== sessionId) return s;
         const messages = [...s.messages];
         const lastMsg = messages[messages.length - 1];
         if (lastMsg?.role === "assistant") {
-          messages[messages.length - 1] = { ...lastMsg, content, id: messageId || lastMsg.id };
+          messages[messages.length - 1] = { 
+            ...lastMsg, 
+            content, 
+            id: messageId || lastMsg.id,
+            downloadLink: downloadLink || lastMsg.downloadLink
+          };
         }
         return { ...s, messages };
       })
     );
   }, []);
+
+  // Generate PDF from content and attach download link to message
+  const generatePDFResponse = useCallback((sessionId: string, content: string, title: string) => {
+    const filename = `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+    const url = createPDFBlobUrl(content, title);
+    const downloadLink: DownloadLink = { url, filename };
+    
+    const responseMessage = `All done! Your **${title}** PDF is ready for download:`;
+    
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      content: responseMessage,
+      role: "assistant",
+      timestamp: new Date(),
+      downloadLink,
+    };
+    
+    addMessage(sessionId, assistantMessage);
+    return assistantMessage;
+  }, [addMessage]);
 
   // Server-validated developer mode unlock
   const unlockDeveloperMode = useCallback(async (): Promise<boolean> => {
@@ -361,5 +387,6 @@ export const useChat = (userId?: string) => {
     unlockDeveloperMode,
     addCustomKnowledge,
     removeCustomKnowledge,
+    generatePDFResponse,
   };
 };
