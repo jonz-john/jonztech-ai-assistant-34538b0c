@@ -81,16 +81,11 @@ const Index = () => {
     setMobileMenuOpen(false);
   };
 
-  const handlePasswordSubmit = () => {
-    const success = unlockDeveloperMode(password);
+  const handlePasswordSubmit = async () => {
+    setPasswordDialogOpen(false);
+    const success = await unlockDeveloperMode();
     if (success) {
-      setPasswordDialogOpen(false);
-      setPassword("");
-      setPasswordError("");
       sendMessage("Developer settings have been unlocked successfully. Welcome, John Ominde! You can now add knowledge to my memory by starting your message with 'remember:' followed by the information you want me to store.");
-      toast.success("Developer mode activated!");
-    } else {
-      setPasswordError("Incorrect password. Access denied.");
     }
   };
 
