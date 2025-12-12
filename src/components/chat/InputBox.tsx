@@ -1,34 +1,86 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Image, X, Camera, FileText, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { extractTextFromPDF, downloadPDF } from "@/utils/pdfUtils";
+import { extractTextFromPDF } from "@/utils/pdfUtils";
 import { toast } from "sonner";
+import { VoiceChatButton } from "./VoiceChatButton";
+import { CameraCapture } from "./CameraCapture";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
 
 interface InputBoxProps {
   onSend: (message: string, image?: string, documentText?: string) => void;
   disabled?: boolean;
   onGeneratePDF?: (content: string) => void;
+  onAISpeaking?: (isSpeaking: boolean) => void;
+  lastAssistantMessage?: string;
 }
 
-export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => {
+export const InputBox = ({ onSend, disabled, onGeneratePDF, onAISpeaking, lastAssistantMessage }: InputBoxProps) => {
   const [message, setMessage] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [documentText, setDocumentText] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
+  const {
+    isListening,
+    isSpeaking,
+    transcript,
+    availableVoices,
+    voiceSettings,
+    startListening,
+    stopListening,
+    speak,
+    stopSpeaking,
+    setVoice,
+    setRate,
+    setPitch,
+    setTranscript,
+  } = useVoiceChat();
+
+  // Update message when transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setMessage(transcript);
+    }
+  }, [transcript]);
+
+  // Notify parent about speaking state
+  useEffect(() => {
+    onAISpeaking?.(isSpeaking);
+  }, [isSpeaking, onAISpeaking]);
+
+  // Speak new AI responses automatically when voice chat is active
+  useEffect(() => {
+    if (lastAssistantMessage && voiceSettings.voice) {
+      speak(lastAssistantMessage);
+    }
+  }, [lastAssistantMessage]);
+
   const handleSend = () => {
     if (message.trim() || image || documentText) {
+      // Stop listening when sending
+      if (isListening) {
+        stopListening();
+      }
       onSend(message.trim(), image || undefined, documentText || undefined);
       setMessage("");
+      setTranscript("");
       setImage(null);
       setDocumentText(null);
       setDocumentName(null);
     }
+  };
+
+  const handleCameraCapture = (imageData: string) => {
+    setImage(imageData);
+    // Automatically prompt for description
+    setMessage("Please describe this image");
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -164,7 +216,7 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
 
       {/* Bottom toolbar */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-0.5 sm:gap-1 flex-wrap">
+        <div className="flex gap-0.5 sm:gap-1 flex-wrap items-center">
           <input
             type="file"
             ref={fileInputRef}
@@ -179,6 +231,23 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
             accept=".pdf,.txt,.md"
             className="hidden"
           />
+          
+          {/* Voice Chat Button */}
+          <VoiceChatButton
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+            availableVoices={availableVoices}
+            currentVoice={voiceSettings.voice}
+            rate={voiceSettings.rate}
+            pitch={voiceSettings.pitch}
+            onStartListening={startListening}
+            onStopListening={stopListening}
+            onStopSpeaking={stopSpeaking}
+            onVoiceChange={setVoice}
+            onRateChange={setRate}
+            onPitchChange={setPitch}
+          />
+
           <Button
             variant="ghost"
             size="icon"
@@ -192,12 +261,7 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
             variant="ghost"
             size="icon"
             className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.setAttribute('capture', 'environment');
-                fileInputRef.current.click();
-              }
-            }}
+            onClick={() => setCameraOpen(true)}
             title="Take photo"
           >
             <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -237,6 +301,13 @@ export const InputBox = ({ onSend, disabled, onGeneratePDF }: InputBoxProps) => 
           <p className="text-primary font-medium">Drop image or document here</p>
         </div>
       )}
+
+      {/* Camera Capture Dialog */}
+      <CameraCapture
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onCapture={handleCameraCapture}
+      />
     </div>
   );
 };
