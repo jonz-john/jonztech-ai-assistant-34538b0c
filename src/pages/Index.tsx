@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChatSidebar } from "@/components/sidebar/ChatSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Menu, X, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { downloadPDF } from "@/utils/pdfUtils";
 import { toast } from "sonner";
 import logo from "@/assets/logo.jpg";
 import {
@@ -26,6 +25,7 @@ const Index = () => {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [lastSpokenMessageId, setLastSpokenMessageId] = useState<string | null>(null);
 
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -45,6 +45,24 @@ const Index = () => {
     addCustomKnowledge,
     generatePDFResponse,
   } = useChat(user?.id);
+
+  // Get the last assistant message for text-to-speech
+  const lastAssistantMessage = useMemo(() => {
+    const assistantMessages = messages.filter(m => m.role === "assistant");
+    const lastMsg = assistantMessages[assistantMessages.length - 1];
+    // Only return if it's a new message we haven't spoken yet
+    if (lastMsg && lastMsg.id !== lastSpokenMessageId && !isLoading) {
+      return lastMsg;
+    }
+    return null;
+  }, [messages, lastSpokenMessageId, isLoading]);
+
+  // Track when we speak a message
+  useEffect(() => {
+    if (lastAssistantMessage) {
+      setLastSpokenMessageId(lastAssistantMessage.id);
+    }
+  }, [lastAssistantMessage]);
 
   useEffect(() => {
     if (darkMode) {
@@ -248,6 +266,7 @@ const Index = () => {
               onSend={handleSend} 
               disabled={isLoading} 
               onGeneratePDF={handleGeneratePDF}
+              lastAssistantMessage={lastAssistantMessage?.content}
             />
             <p className="text-[9px] sm:text-[10px] text-center text-muted-foreground mt-1.5 sm:mt-2">
               JonzTech AI can make mistakes. Consider checking important information.
